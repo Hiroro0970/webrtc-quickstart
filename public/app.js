@@ -27,11 +27,17 @@ function init() {
  * メディアへのアクセスを行い、自身と接続先のメディアを出力する
  */
 async function openUserMedia() {
-  localStream = await navigator.mediaDevices.getUserMedia(constraits);
-  localVideoElem.srcObject = localStream;
-
+  const stream = await navigator.mediaDevices.getUserMedia(constraits);
+  document.querySelector("#localVideo").srcObject = stream;
+  localStream = stream;
   remoteStream = new MediaStream();
-  remoteVideoElem.srcObject = remoteStream;
+  document.querySelector("#remoteVideo").srcObject = remoteStream;
+
+  console.log("Stream:", document.querySelector("#localVideo").srcObject);
+  document.querySelector("#cameraBtn").disabled = true;
+  document.querySelector("#joinBtn").disabled = false;
+  document.querySelector("#createBtn").disabled = false;
+  document.querySelector("#hangupBtn").disabled = false;
 }
 
 /**
@@ -216,6 +222,28 @@ async function hangUp(e) {
   document.location.reload(true);
 }
 
+function registerPeerConnectionListeners() {
+  peerConnection.addEventListener("icegatheringstatechange", () => {
+    console.log(
+      `ICE gathering state changed: ${peerConnection.iceGatheringState}`
+    );
+  });
+
+  peerConnection.addEventListener("connectionstatechange", () => {
+    console.log(`Connection state change: ${peerConnection.connectionState}`);
+  });
+
+  peerConnection.addEventListener("signalingstatechange", () => {
+    console.log(`Signaling state change: ${peerConnection.signalingState}`);
+  });
+
+  peerConnection.addEventListener("iceconnectionstatechange ", () => {
+    console.log(
+      `ICE connection state change: ${peerConnection.iceConnectionState}`
+    );
+  });
+}
+
 /**
  * ICE(Internet Connectivity Establishment) candidates情報を取得する。
  * RTCPeerConnectionを使ってメディアのやり取りするには事前にConectivity情報が必要となる。
@@ -251,3 +279,5 @@ async function collectICECandidates(
     });
   });
 }
+
+init();
