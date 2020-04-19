@@ -1,0 +1,20 @@
+{
+  "name": "webrtc-quickstart",
+  "version": "1.0.0",
+  "description": "Quick start for WebRTC",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hiroro0970/webrtc-quickstart.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Hiroro0970/webrtc-quickstart/issues"
+  },
+  "homepage": "https://github.com/Hiroro0970/webrtc-quickstart#readme"
+}
