@@ -52,7 +52,7 @@ async function createRoom() {
 
   peerConnection = new RTCPeerConnection(configuration);
 
-  registerPeerConnectionListners();
+  registerPeerConnectionListeners();
 
   const offer = await peerConnection.createOffer();
 
@@ -136,7 +136,7 @@ async function joinRoomById(id) {
 
   if (roomSnapshot.exists) {
     peerConnection = new RTCPeerConnection(configuration);
-    registerPeerConnectionListners();
+    registerPeerConnectionListeners();
 
     // ここでcameraおよびaudioの情報を配信している
     localStream.getTracks().forEach((track) => {
