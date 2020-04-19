@@ -20,6 +20,7 @@ const remoteVideoElem = document.getElementById("remote-video");
 const cameraBtn = document.getElementById("camera-btn");
 const callBtn = document.getElementById("call-btn");
 const hangupBtn = document.getElementById("hangup-btn");
+const currentRoomTxt = document.getElementById('currentRoom')
 
 /**
  * メディアへのアクセスを行い、自身と接続先のメディアを出力する
@@ -30,4 +31,49 @@ function openUserMedia() {
 
   remoteStream = new MediaStream();
   remoteVideoElem.srcObject = remoteStream;
+}
+
+/**
+ * Roomを作成する
+ * RTCを行うにはRTCSessionDescription情報を共有する必要があり、そのうちcaller(roomのホスト)が"offer"を生成して
+ * Firestoreに保管する
+ */
+function createRoom() {
+  const db = firebase.firestore();
+
+  peerConnection = new RTCPeerConnection(configuration);
+
+  registerPeerConnectionListners();
+
+  const offer = await peerConnection.createOffer()
+
+  // 自身のRTCPeerConnectionにoffer情報をセットする
+  await peerConnection.setLocalDescription(offer);
+
+  const roomWithOffer = {
+    offer : {
+      type : offer.type,
+      sdp: offer.sdp
+    }
+  }
+
+  const roomRef = await db.collection('rooms').add(roomWithOffer);
+  const roomId = roomRef.id;
+  currentRoomTxt.innerText = `current room is ${roomId} - You are the caller!`
+
+  // ここでameraおよびaudioの情報を配信している
+  localStream.getTracks().forEach(track => {
+    peerConnection.addTrack(track, localStream);
+  });
+
+  // calleeが"answer"を保管したら処理が走る
+  roomRef.onSnapshot(async snapshot => {
+    console.log('Got updated room:', snapshot.data());
+    const data = snapshot.data();
+    if (!peerConnection.currentRemoteDescription && data.answer) {
+        console.log('Set remote description: ', data.answer);
+        const answer = new RTCSessionDescription(data.answer)
+        await peerConnection.setRemoteDescription(answer);
+    }
+});
 }
