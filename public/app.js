@@ -77,6 +77,8 @@ function createRoom() {
     }
   });
 
+  await collectICECandidates(roomRef, peerConnection, "host", "guest");
+
   // リモート側のcamera及びaudioの情報を配信する
   peerConnection.addEventListener('track', event => {
     console.log('Got remote track:', event.streams[0]);
@@ -138,6 +140,8 @@ async function joinRoomById(id) {
     }
     roomRef.update(roomWithAnswer)
 
+    await collectICECandidates(roomRef, peerConnection, "host", "guest");
+
     // リモート側のcamera及びaudioの情報を配信する
     peerConnection.addEventListener('track', event => {
       console.log('Got remote track:', event.streams[0]);
@@ -147,4 +151,36 @@ async function joinRoomById(id) {
       });
     });
   }
+
+  /**
+   * ICE(Internet Connectivity Establishment) candidates情報を取得する。
+   * RTCPeerConnectionを使ってメディアのやり取りするには事前にConectivity情報が必要となる。
+   * 
+   * @param {*} roomRef Firestoreのroomsコレクション
+   * @param {*} peerConneciton 
+   * @param {*} localName 自身(local)側のname
+   * @param {*} remoteName 相手(remote)側のname
+   */
+  async function collectICECandidates(roomRef, peerConneciton, localName, remoteName) {
+    const candidatesCollection = roomRef.collection(localName);
+
+    // 自身(local)のcandidates情報をFirestoreに保管する
+    peerConnection.addEventListener('icecandidate', event => {
+      if (event.candidate) {
+        const json = event.candidate.toJSON();
+        candidatesCollection.add(json);
+      }
+    });
+
+    // 相手(remote)のcandidates情報を自身のRTCPeerConnectionに追加する
+    roomRef.collection(remoteName).onSnapshot(snapshot => {
+      snapshot.docChanges().forEach(change => {
+        if (change.type === "added") {
+          const candidate = new RTCIceCandidate(change.doc.data());
+          peerConneciton.addIceCandidate(candidate);
+        }
+      });
+    })
+  }
+  
 }
