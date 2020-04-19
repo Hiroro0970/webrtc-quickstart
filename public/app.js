@@ -86,3 +86,65 @@ function createRoom() {
     });
   });
 }
+
+/**
+ * Roomに参加するためのID入力画面を表示
+ */
+function joinRoom() {
+  document.querySelector('#confirmJoinBtn').
+      addEventListener('click', async () => {
+        roomId = document.querySelector('#room-id').value;
+        console.log('Join room: ', roomId);
+        document.querySelector(
+            '#currentRoom').innerText = `Current room is ${roomId} - You are the callee!`;
+        await joinRoomById(roomId);
+      }, {once: true});
+  roomDialog.open();
+}
+
+/**
+ * 入力したRoomIDに合致する部屋に参加する
+ * ここではcallee(roomのゲスト)が"answer"を生成してFirestoreに追加する
+ * 
+ * @param {*} id 
+ */
+async function joinRoomById(id) {
+  const db = firebase.firestore()
+  const roomRef = db.collection('rooms').doc(id);
+  const roomSnapshot = await roomRef.get();
+
+  if(roomSnapshot.exists) {
+    peerConnection = new RTCPeerConnection(configuration);
+    registerPeerConnectionListners();
+
+    // ここでcameraおよびaudioの情報を配信している
+    localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, localStream);
+    });
+
+    // callee側では"offer"をRemoteDescriptionにセットする
+    const offer = roomSnapshot.data().offer;
+    await peerConnection.setRemoteDescription(offer);
+
+    // callee側では"answer"をLocalDescriptionにセットする
+    const answer = await peerConnection.createAnswer()
+    await peerConnection.setLocalDescription(answer)
+
+    const roomWithAnswer = {
+      answer: {
+        type: answer.type,
+        sdp: answer.sdp
+      }
+    }
+    roomRef.update(roomWithAnswer)
+
+    // リモート側のcamera及びaudioの情報を配信する
+    peerConnection.addEventListener('track', event => {
+      console.log('Got remote track:', event.streams[0]);
+      event.streams[0].getTracks().forEach(track => {
+        console.log('Add a track to the remoteStream:', track);
+        remoteStream.addTrack(track);
+      });
+    });
+  }
+}
