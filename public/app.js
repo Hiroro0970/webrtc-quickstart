@@ -68,7 +68,9 @@ async function createRoom() {
 
   const roomRef = await db.collection("rooms").add(roomWithOffer);
   const roomId = roomRef.id;
-  currentRoomTxt.innerText = `current room is ${roomId} - You are the caller!`;
+  document.querySelector(
+    "#currentRoom"
+  ).innerText = `current room is ${roomId} - You are the caller!`;
 
   // ここでcameraおよびaudioの情報を配信している
   localStream.getTracks().forEach((track) => {
