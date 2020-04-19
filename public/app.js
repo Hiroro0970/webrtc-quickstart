@@ -61,7 +61,7 @@ function createRoom() {
   const roomId = roomRef.id;
   currentRoomTxt.innerText = `current room is ${roomId} - You are the caller!`
 
-  // ここでameraおよびaudioの情報を配信している
+  // ここでcameraおよびaudioの情報を配信している
   localStream.getTracks().forEach(track => {
     peerConnection.addTrack(track, localStream);
   });
@@ -75,5 +75,14 @@ function createRoom() {
         const answer = new RTCSessionDescription(data.answer)
         await peerConnection.setRemoteDescription(answer);
     }
-});
+  });
+
+  // リモート側のcamera及びaudioの情報を配信する
+  peerConnection.addEventListener('track', event => {
+    console.log('Got remote track:', event.streams[0]);
+    event.streams[0].getTracks().forEach(track => {
+      console.log('Add a track to the remoteStream:', track);
+      remoteStream.addTrack(track);
+    });
+  });
 }
