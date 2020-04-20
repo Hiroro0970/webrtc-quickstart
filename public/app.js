@@ -54,10 +54,21 @@ async function createRoom() {
 
   registerPeerConnectionListeners();
 
-  const offer = await peerConnection.createOffer();
+  // ここでcameraおよびaudioの情報を配信している
+  localStream.getTracks().forEach((track) => {
+    peerConnection.addTrack(track, localStream);
+  });
 
-  // 自身のRTCPeerConnectionにoffer情報をセットする
-  await peerConnection.setLocalDescription(offer);
+  // リモート側のcamera及びaudioの情報を配信する
+  peerConnection.addEventListener("track", (event) => {
+    console.log("Got remote track:", event.streams[0]);
+    event.streams[0].getTracks().forEach((track) => {
+      console.log("Add a track to the remoteStream:", track);
+      remoteStream.addTrack(track);
+    });
+  });
+  
+  const offer = await peerConnection.createOffer();
 
   const roomWithOffer = {
     offer: {
@@ -65,17 +76,22 @@ async function createRoom() {
       sdp: offer.sdp,
     },
   };
-
   const roomRef = await db.collection("rooms").add(roomWithOffer);
   const roomId = roomRef.id;
+  
+  await collectICECandidates(
+    roomRef,
+    peerConnection,
+    "callerCandidates",
+    "calleeCandidates"
+  );
+  
   document.querySelector(
     "#currentRoom"
   ).innerText = `current room is ${roomId} - You are the caller!`;
 
-  // ここでcameraおよびaudioの情報を配信している
-  localStream.getTracks().forEach((track) => {
-    peerConnection.addTrack(track, localStream);
-  });
+  // 自身のRTCPeerConnectionにoffer情報をセットする
+  await peerConnection.setLocalDescription(offer);
 
   roomRef.onSnapshot(async (snapshot) => {
     console.log("Got updated room:", snapshot.data());
@@ -89,21 +105,6 @@ async function createRoom() {
     }
   });
 
-  await collectICECandidates(
-    roomRef,
-    peerConnection,
-    "callerCandidates",
-    "calleeCandidates"
-  );
-
-  // リモート側のcamera及びaudioの情報を配信する
-  peerConnection.addEventListener("track", (event) => {
-    console.log("Got remote track:", event.streams[0]);
-    event.streams[0].getTracks().forEach((track) => {
-      console.log("Add a track to the remoteStream:", track);
-      remoteStream.addTrack(track);
-    });
-  });
 }
 
 /**
@@ -140,11 +141,26 @@ async function joinRoomById(id) {
     peerConnection = new RTCPeerConnection(configuration);
     registerPeerConnectionListeners();
 
+    await collectICECandidates(
+      roomRef,
+      peerConnection,
+      "calleeCandidates",
+      "callerCandidates"
+    );
+
     // ここでcameraおよびaudioの情報を配信している
     localStream.getTracks().forEach((track) => {
       peerConnection.addTrack(track, localStream);
     });
 
+    // リモート側のcamera及びaudioの情報を配信する
+    peerConnection.addEventListener("track", (event) => {
+      console.log("Got remote track:", event.streams[0]);
+      event.streams[0].getTracks().forEach((track) => {
+        console.log("Add a track to the remoteStream:", track);
+        remoteStream.addTrack(track);
+      });
+    });
     // callee側では"offer"をRemoteDescriptionにセットする
     const offer = roomSnapshot.data().offer;
     await peerConnection.setRemoteDescription(offer);
@@ -161,21 +177,7 @@ async function joinRoomById(id) {
     };
     roomRef.update(roomWithAnswer);
 
-    await collectICECandidates(
-      roomRef,
-      peerConnection,
-      "calleeCandidates",
-      "callerCandidates"
-    );
 
-    // リモート側のcamera及びaudioの情報を配信する
-    peerConnection.addEventListener("track", (event) => {
-      console.log("Got remote track:", event.streams[0]);
-      event.streams[0].getTracks().forEach((track) => {
-        console.log("Add a track to the remoteStream:", track);
-        remoteStream.addTrack(track);
-      });
-    });
   }
 }
 
