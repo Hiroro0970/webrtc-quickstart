@@ -1,3 +1,4 @@
 .firebaserc
 firebase.json
 database.rules.json
+package-lock.json
